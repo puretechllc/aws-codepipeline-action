@@ -5,6 +5,7 @@
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\"",
+        "build": "ncc build index.js --minify -o dist/",
         "run_locally": "DOT_ENV_FILE=.env.development node index.js"
     },
     "keywords": [
@@ -26,6 +27,7 @@
         "aws-sdk": "^2.705.0"
     },
     "devDependencies": {
+        "@vercel/ncc": "^0.36.1",
         "dotenv": "^16.0.3"
     }
 }
