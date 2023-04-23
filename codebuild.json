@@ -1,0 +1,160 @@
+{
+    "pipeline": {
+        "name": "myjunna-web-pipeline",
+        "roleArn": "arn:aws:iam::920752483833:role/service-role/AWSCodePipelineServiceRole-us-east-2-test-junna",
+        "artifactStore": {
+            "type": "S3",
+            "location": "codepipeline-us-east-2-42133891286"
+        },
+        "stages": [
+            {
+                "name": "Source",
+                "actions": [
+                    {
+                        "name": "Source",
+                        "actionTypeId": {
+                            "category": "Source",
+                            "owner": "AWS",
+                            "provider": "CodeStarSourceConnection",
+                            "version": "1"
+                        },
+                        "runOrder": 1,
+                        "configuration": {
+                            "BranchName": "develop",
+                            "ConnectionArn": "arn:aws:codestar-connections:us-east-2:920752483833:connection/70b939a5-49b8-4833-b2c7-1d5598a637dc",
+                            "DetectChanges": "false",
+                            "FullRepositoryId": "My-Junna/myjunna-web",
+                            "OutputArtifactFormat": "CODE_ZIP"
+                        },
+                        "outputArtifacts": [
+                            {
+                                "name": "SourceArtifact"
+                            }
+                        ],
+                        "inputArtifacts": [],
+                        "region": "us-east-2",
+                        "namespace": "SourceVariables"
+                    }
+                ]
+            },
+            {
+                "name": "Build",
+                "actions": [
+                    {
+                        "name": "Build",
+                        "actionTypeId": {
+                            "category": "Build",
+                            "owner": "AWS",
+                            "provider": "CodeBuild",
+                            "version": "1"
+                        },
+                        "runOrder": 1,
+                        "configuration": {
+                            "ProjectName": "myjunna-web"
+                        },
+                        "outputArtifacts": [
+                            {
+                                "name": "BuildArtifact"
+                            }
+                        ],
+                        "inputArtifacts": [
+                            {
+                                "name": "SourceArtifact"
+                            }
+                        ],
+                        "region": "us-east-2",
+                        "namespace": "BuildVariables"
+                    }
+                ]
+            },
+            {
+                "name": "Deploy",
+                "actions": [
+                    {
+                        "name": "Deploy",
+                        "actionTypeId": {
+                            "category": "Deploy",
+                            "owner": "AWS",
+                            "provider": "CodeDeployToECS",
+                            "version": "1"
+                        },
+                        "runOrder": 1,
+                        "configuration": {
+                            "AppSpecTemplateArtifact": "BuildArtifact",
+                            "AppSpecTemplatePath": "appspec.yaml",
+                            "ApplicationName": "AppECS-dev-cluster-my-junna-svc",
+                            "DeploymentGroupName": "DgpECS-dev-cluster-my-junna-svc",
+                            "Image1ArtifactName": "BuildArtifact",
+                            "Image1ContainerName": "IMAGE1_NAME",
+                            "TaskDefinitionTemplateArtifact": "BuildArtifact",
+                            "TaskDefinitionTemplatePath": "taskdef.json"
+                        },
+                        "outputArtifacts": [],
+                        "inputArtifacts": [
+                            {
+                                "name": "BuildArtifact"
+                            }
+                        ],
+                        "region": "us-east-2"
+                    },
+                    {
+                        "name": "Deploy-Queue-Service",
+                        "actionTypeId": {
+                            "category": "Deploy",
+                            "owner": "AWS",
+                            "provider": "CloudFormation",
+                            "version": "1"
+                        },
+                        "runOrder": 2,
+                        "configuration": {
+                            "ActionMode": "CREATE_UPDATE",
+                            "Capabilities": "CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_IAM",
+                            "ParameterOverrides": "{\"Environment\": \"dev\", \"Role\": \"queue\", \"ImageURI\":  { \"Fn::GetParam\" : [ \"BuildArtifact\", \"imageDetail.json\", \"ImageURI\" ] }}",
+                            "RoleArn": "arn:aws:iam::920752483833:role/CICDCloudformationRole",
+                            "StackName": "myjunna-queue-stack",
+                            "TemplatePath": "BuildArtifact::cloudformation.yaml"
+                        },
+                        "outputArtifacts": [],
+                        "inputArtifacts": [
+                            {
+                                "name": "BuildArtifact"
+                            }
+                        ],
+                        "region": "us-east-2"
+                    },
+                    {
+                        "name": "Deploy-Scheduler-Service",
+                        "actionTypeId": {
+                            "category": "Deploy",
+                            "owner": "AWS",
+                            "provider": "CloudFormation",
+                            "version": "1"
+                        },
+                        "runOrder": 2,
+                        "configuration": {
+                            "ActionMode": "CREATE_UPDATE",
+                            "Capabilities": "CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND",
+                            "ParameterOverrides": "{\"Environment\": \"dev\", \"Role\": \"scheduler\", \"ImageURI\":  { \"Fn::GetParam\" : [ \"BuildArtifact\", \"imageDetail.json\", \"ImageURI\" ] }}",
+                            "RoleArn": "arn:aws:iam::920752483833:role/CICDCloudformationRole",
+                            "StackName": "myjunna-scheduler-stack",
+                            "TemplatePath": "BuildArtifact::cloudformation.yaml"
+                        },
+                        "outputArtifacts": [],
+                        "inputArtifacts": [
+                            {
+                                "name": "BuildArtifact"
+                            }
+                        ],
+                        "region": "us-east-2"
+                    }
+                ]
+            }
+        ],
+        "version": 18
+    },
+    "metadata": {
+        "pipelineArn": "arn:aws:codepipeline:us-east-2:920752483833:myjunna-web-pipeline",
+        "created": "2022-03-20T01:41:08.577000-05:00",
+        "updated": "2023-01-29T18:17:08.426000-06:00"
+    }
+}
